@@ -1,0 +1,3 @@
+DM/audios/clean/book_00000_chp_0009_reader_06709_2.wav
+DM/audios/clean/book_00000_chp_0009_reader_06709_7.wav
+DM/audios/clean/book_00000_chp_0009_reader_06709_8.wav

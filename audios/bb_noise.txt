@@ -1,0 +1,3 @@
+DM/audios/bb_noise/book_07341_chp_0031_reader_10200_16.wav
+DM/audios/bb_noise/book_07341_chp_0031_reader_10200_17.wav
+DM/audios/bb_noise/book_07341_chp_0031_reader_10200_18.wav
