@@ -1,9 +1,10 @@
 import random
 import numpy as np
 import librosa
+import os
+import soundfile as sf
 
 from scipy import signal
-import librosa
 
 
 class DynamicMixing:
@@ -32,9 +33,9 @@ class DynamicMixing:
             snr_range: Background noise level. Default is [-5, 25]
             sir_range: Bubble noise level. Default is [-5, 25]
             sr: Sample rate. Default is 16000
-            max_bg_noise_to_mix: The maximum number of BACKGROUND noise added to the clean audio when <allowed_overlapped_bg_noise> is False.
-                                 Otherwise, add BACKGROUND noise till the end of audio. Default is 3
-            max_speakers_to_mix: The maximum number of speakers added to the clean audio (bubble noise). Default is 3
+            max_bg_noise_to_mix: The maximum number of BACKGROUND noise added to the clean audio when <allowed_overlapped_bg_noise> is True.
+                                 if <allowed_overlapped_bg_noise> is False, add BACKGROUND noise till the end of audio. Default is 3
+            max_speakers_to_mix: The maximum number of speakers appear in the clean audio (bubble noise). Default is 3
             reverb_proportion: Chance of using reverb. Default is 0.5
             target_level: Default is -25
             target_level_floating_value: Default is 10
@@ -52,9 +53,7 @@ class DynamicMixing:
         self.max_bg_noise_to_mix = max_bg_noise_to_mix
         self.max_speakers_to_mix = max_speakers_to_mix
         self.reverb_proportion = reverb_proportion
-        self.noise_duration_percentage = noise_duration_percentage
         self.target_level = target_level
-        self.sub_sample_length = sub_sample_length
         self.target_level_floating_value = target_level_floating_value
         self.allowed_overlapped_bg_noise = allowed_overlapped_bg_noise
         self.silence_length = silence_length
@@ -62,7 +61,7 @@ class DynamicMixing:
 
         assert 0 <= self.reverb_proportion <= 1, "reverberation proportion should be in [0, 1]"
 
-        self.bg_noise_dataset_list = [line.rstrip('\n') for line in open(noise_dataset, "r")]
+        self.bg_noise_dataset_list = [line.rstrip('\n') for line in open(bg_noise_dataset, "r")]
         self.bb_noise_dataset_list = [line.rstrip('\n') for line in open(bb_noise_dataset, "r")]
         self.rir_dataset_list = [line.rstrip('\n') for line in open(rir_dataset, "r")]
 
@@ -101,15 +100,15 @@ class DynamicMixing:
         '''Function to write audio'''
 
         if clip_test:
-            if is_clipped(audio, clipping_threshold=clipping_threshold):
+            if self.is_clipped(audio, clipping_threshold=clipping_threshold):
                 raise ValueError("Clipping detected in audiowrite()! " + \
                                 destpath + " file not written to disk.")
 
         if norm:
-            audio = normalize(audio, target_level)
+            audio = self.normalize(audio, target_level)
             max_amp = max(abs(audio))
             if max_amp >= clipping_threshold:
-                audio = audio/max_amp * (clipping_threshold-EPS)
+                audio = audio/max_amp * (clipping_threshold)
 
         destpath = os.path.abspath(destpath)
         destdir = os.path.dirname(destpath)
@@ -170,8 +169,8 @@ class DynamicMixing:
         noise_y = np.zeros(target_length, dtype=np.float32)
         silence = np.zeros(int(self.sr * self.silence_length), dtype=np.float32)
 
-        noise_file = self.random_select_from(self.speaker_dataset_list)
-        noise_to_add = load_wav(noise_file, sr=self.sr)
+        noise_file = self.random_select_from(self.bg_noise_dataset_list)
+        noise_to_add = self.load_wav(noise_file, sr=self.sr)
 
         if self.allowed_overlapped_bg_noise:
             if len(noise_to_add) < target_length:
@@ -199,9 +198,9 @@ class DynamicMixing:
         return noise_y, start_pos, noise_file
 
     def select_speaker_y(self, target_length):
-        speaker_file = self.random_select_from(self.speaker_dataset_list)
+        speaker_file = self.random_select_from(self.bb_noise_dataset_list)
         speaker_y = np.zeros(target_length, dtype=np.float32)
-        speaker_to_added = load_wav(speaker_file, sr=self.sr)
+        speaker_to_added = self.load_wav(speaker_file, sr=self.sr)
 
         if len(speaker_to_added) < target_length:
             idx_start = np.random.randint(target_length - len(speaker_to_added))
@@ -238,8 +237,8 @@ class DynamicMixing:
 
         # Mix bubble nosie
         for speaker_y, sir in zip(speakers_y, sirs):
-            speaker_y, _ = norm_amplitude(speaker_y)
-            speaker_y, _, _ = rescale(speaker_y, self.target_level)
+            speaker_y, _ = self.norm_amplitude(speaker_y)
+            speaker_y, _, _ = self.rescale(speaker_y, self.target_level)
             speaker_rms = (speaker_y ** 2).mean() ** 0.5
 
             sir_scalar = clean_rms / (10 ** (sir / 20)) / (speaker_rms + eps)
@@ -248,8 +247,8 @@ class DynamicMixing:
 
         # Mix background noise
         for noise_y, snr in zip(noises_y, snrs):
-            noise_y, _ = norm_amplitude(noise_y)
-            noise_y, _, _ = rescale(noise_y, self.target_level)
+            noise_y, _ = self.norm_amplitude(noise_y)
+            noise_y, _, _ = self.rescale(noise_y, self.target_level)
             noise_rms = (noise_y ** 2).mean() ** 0.5
 
             snr_scalar = clean_rms / (10 ** (snr / 20)) / (noise_rms + eps)
@@ -262,12 +261,12 @@ class DynamicMixing:
             self.target_level - self.target_level_floating_value,
             self.target_level + self.target_level_floating_value
         )
-        noisy_y, _, noisy_scalar = self.tailor_dB_FS(noisy_y, noisy_target_level)
+        noisy_y, _, noisy_scalar = self.rescale(noisy_y, noisy_target_level)
         clean_y *= noisy_scalar
 
 
         # check if there are any amplitudes exceeding +/- 1. If so, normalize all the signals accordingly
-        if is_clipped(noisy_y):
+        if self.is_clipped(noisy_y):
             noisy_y_scalar = np.max(np.abs(noisy_y)) / (0.99 - eps)  # 相当于除以 1
             noisy_y = noisy_y / noisy_y_scalar
             clean_y = clean_y / noisy_y_scalar
@@ -281,7 +280,7 @@ class DynamicMixing:
         sirs = []
         speakers_y = []
         bb_noise_files = []
-        n_speakers = np.random.randint(1, self.max_n_speakers_to_mix)
+        n_speakers = np.random.randint(1, self.max_speakers_to_mix)
         while len(speakers_y) < n_speakers:
             speaker_y, bb_noise_file = self.select_speaker_y(len(clean_y))
             speakers_y += [speaker_y]
@@ -322,16 +321,16 @@ class DynamicMixing:
         use_reverb = bool(np.random.random(1) < self.reverb_proportion)
         if use_reverb:
             rir_file = self.random_select_from(self.rir_dataset_list)
-            rir = load_wav(rir_file, sr=self.sr)
+            rir = self.load_wav(rir_file, sr=self.sr)
         else:
-            rir_file, rir = None
+            rir_file, rir = None, None
 
         noisy_y, clean_y = self.mix(
             clean_y = clean_y,
             speakers_y = speakers_y,
-            noise_y = noise_y,
-            snr = snrs,
-            sir = sir,
+            noises_y = noises_y,
+            snrs = snrs,
+            sirs = sirs,
             rir = rir
         )
 
@@ -348,7 +347,7 @@ class DynamicMixing:
             "bg_noise_files": bg_noise_files,
             "bb_noise_files": bb_noise_files,
             "sirs": sirs,
-            "snrs":, snrs,
+            "snrs": snrs,
             "rir_file": rir_file
         }
         return output

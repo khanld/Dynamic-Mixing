@@ -1,3 +1,3 @@
-DM/audios/rir/RIR_LargeRoom2_near_AnglB_m7.wav
-DM/audios/rir/RIR_MediumRoom1_far_AnglA_m4.wav
-DM/audios/rir/RIR_SimRoom1_near_AnglB_m2.wav
+audios/rir/RIR_LargeRoom2_near_AnglB_m7.wav
+audios/rir/RIR_MediumRoom1_far_AnglA_m4.wav
+audios/rir/RIR_SimRoom1_near_AnglB_m2.wav
