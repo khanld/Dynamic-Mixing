@@ -373,5 +373,4 @@ class DynamicMixing:
             "snrs": snrs,
             "rir_file": rir_file
         }
-        print(output)
         return output
