@@ -31,15 +31,15 @@ mixer = DynamicMixing(bg_noise_dataset = 'audios/bg_noise.txt',
                       silence_length = 0.2,
                       saved_dir = 'audios/noisy')
 
-clean_path = 'audios/clean book_00000_chp_0009_reader_06709_2.wav'
+clean_path = 'audios/clean/book_00000_chp_0009_reader_06709_2.wav'
 output = mixer.generate(clean_path, save_to_dir = True)
 
 # output is a dictionary, pls check the DynamicMixing code
-print(output)
+print("Output: ", output)
 
-# get the noisy
+# get the noisy data
 noisy_y = output['noisy']
-print(noisy_y)
+print("Noisy data: ", noisy_y)
 ```
 
 Generate and save [noisy audios](audios/noisy):
