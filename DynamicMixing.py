@@ -33,14 +33,15 @@ class DynamicMixing:
             snr_range: Background noise level. Default is [-5, 25]
             sir_range: Bubble noise level. Default is [-5, 25]
             sr: Sample rate. Default is 16000
-            max_bg_noise_to_mix: The maximum number of BACKGROUND noise added to the clean audio when <allowed_overlapped_bg_noise> is True.
-                                 if <allowed_overlapped_bg_noise> is False, add BACKGROUND noise till the end of audio. Default is 3
+            max_bg_noise_to_mix: The maximum number of BACKGROUND noises added to the clean audio when <allowed_overlapped_bg_noise> is True.
+                                 If <allowed_overlapped_bg_noise> is False, add UNLIMITED number of BACKGROUND noises till the end of the 
+                                 audio with silence between. Default is 3
             max_speakers_to_mix: The maximum number of speakers appear in the clean audio (bubble noise). Default is 3
             reverb_proportion: Chance of using reverb. Default is 0.5
             target_level: Default is -25
             target_level_floating_value: Default is 10
             allowed_overlapped_bg_noise: Whether to allow overlapped BACKGROUND noise. 
-                                         If False, evenly add BACKGROUND noise with silence between. Default is True.
+                                         If False, evenly add UNLIMITED number of BACKGROUND noises with silence between. Default is True.
                                          * Note: For BUBBLE noise, overlapped is allowed by default. 
                                                  Since if we add a new speaker to the clean speech audio, 
                                                  there exits two overlapped voice in the audio
@@ -56,7 +57,7 @@ class DynamicMixing:
         self.target_level = target_level
         self.target_level_floating_value = target_level_floating_value
         self.allowed_overlapped_bg_noise = allowed_overlapped_bg_noise
-        self.silence_length = silence_length
+        self.silence_length = int(silence_length * self.sr)
         self.saved_dir = saved_dir
 
         assert 0 <= self.reverb_proportion <= 1, "reverberation proportion should be in [0, 1]"
@@ -166,8 +167,9 @@ class DynamicMixing:
             return data
 
     def select_noise_y(self, target_length, start_pos):
+        target_length = int(target_length)
+        start_pos = int(start_pos)
         noise_y = np.zeros(target_length, dtype=np.float32)
-        silence = np.zeros(int(self.sr * self.silence_length), dtype=np.float32)
 
         noise_file = self.random_select_from(self.bg_noise_dataset_list)
         noise_to_add = self.load_wav(noise_file, sr=self.sr)
@@ -180,8 +182,7 @@ class DynamicMixing:
                 noise_y = noise_to_add[:target_length]
         else:
             if start_pos + len(noise_to_add) < target_length:
-                idx_start = np.random.randint(start_pos, start_pos + len(noise_to_add))
-                noise_y[idx_start:idx_start + len(noise_to_add)] += noise_to_add
+                noise_y[start_pos:start_pos + len(noise_to_add)] += noise_to_add
 
                 start_pos += len(noise_to_add)
             else:
@@ -194,7 +195,6 @@ class DynamicMixing:
                     start_pos = start_pos + self.silence_length
                 else:
                     start_pos = -1
-
         return noise_y, start_pos, noise_file
 
     def select_speaker_y(self, target_length):
@@ -280,7 +280,7 @@ class DynamicMixing:
         sirs = []
         speakers_y = []
         bb_noise_files = []
-        n_speakers = np.random.randint(1, self.max_speakers_to_mix)
+        n_speakers = np.random.randint(1, self.max_speakers_to_mix+1)
         while len(speakers_y) < n_speakers:
             speaker_y, bb_noise_file = self.select_speaker_y(len(clean_y))
             speakers_y += [speaker_y]
@@ -291,18 +291,19 @@ class DynamicMixing:
         noises_y = []
         bg_noise_files = []
         if self.allowed_overlapped_bg_noise:
-            n_noises = np.random.randint(1, self.max_bg_noise_to_mix)
+            n_noises = np.random.randint(1, self.max_bg_noise_to_mix+1)
             while len(noises_y) < n_noises:
-                noise_y, _, bg_noise_file = self.select_noise_y(len(clean_y), None)
+                noise_y, _, bg_noise_file = self.select_noise_y(len(clean_y), -1)
                 noises_y += [noise_y]
                 snrs += [self.random_select_from(self.snr_list)]
                 bg_noise_files += [bg_noise_file]
         else:
             start_pos = 0
             while start_pos != -1:
-                noise_y, start_pos = self.select_noise_y(len(clean_y), start_pos)
+                noise_y, start_pos, bg_noise_file = self.select_noise_y(len(clean_y), start_pos)
                 noises_y += [noise_y]
                 snrs += [self.random_select_from(self.snr_list)]
+                bg_noise_files += [bg_noise_file]
 
         '''
         3 cases:

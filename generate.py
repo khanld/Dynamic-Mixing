@@ -2,6 +2,7 @@ import librosa
 import os
 import argparse
 
+from distutils.util import strtobool
 from DynamicMixing import DynamicMixing
 
 if __name__ == '__main__':
@@ -14,9 +15,9 @@ if __name__ == '__main__':
                       help='Default is None')
     args.add_argument('--rir_dataset', type=str, default = '/home/khanhld/Desktop/DynamicMixing/audios/rir.txt',
                       help='Default is None')
-    args.add_argument('--snr_range', type=int, nargs = '+', default = [-5,25],
+    args.add_argument('--snr_range', type=lambda x: [int(item) for item in x.split(',')], default = "-5,25",
                       help='Background noise level. Default is [-5, 25].')
-    args.add_argument('--sir_range', type=list, nargs = '+', default = [-5,25],
+    args.add_argument('--sir_range', type=lambda x: [int(item) for item in x.split(',')], default = "-5,25",
                       help='Bubble noise level. Default is [-5, 25]')                  
     args.add_argument('--max_bg_noise_to_mix', type=int, default = 3,
                       help='Default is 3')   
@@ -28,7 +29,7 @@ if __name__ == '__main__':
                       help='Default is -25')   
     args.add_argument('--target_level_floating_value', type=int, default = 10,
                       help='Default is 10')  
-    args.add_argument('--allowed_overlapped_bg_noise', type=bool, default = True, 
+    args.add_argument('--allowed_overlapped_bg_noise', type=lambda x: bool(strtobool(x)), default = "true", 
                       help = 'Default is true')    
     args.add_argument('--silence_length', type=float, default = 0.2, 
                       help = 'Default is 0.2')    
