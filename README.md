@@ -42,7 +42,7 @@ noisy_y = output['noisy']
 print("Noisy data: ", noisy_y)
 ```
 
-Generate and save [noisy audios](audios/noisy):
+Generate and save generated [noisy audios](audios/noisy):
 ```CMD
 python generate.py \
     --clean_dataset=audios/clean.txt \
