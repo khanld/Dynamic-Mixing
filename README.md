@@ -10,7 +10,7 @@ pip install -r requirements.txt
 ```
 
 ### Usage
-It is recommended to understand the [DynamicMixing arguments](DynamicMixing.py) before using it.
+It is recommended to understand the [DynamicMixing arguments](DynamicMixing.py) before using it. You must provide either the ```bg_noise_dataset``` or ```bb_noise_dataset``` argument.
 <br>
 Inline python code:
 ```python
@@ -42,7 +42,7 @@ noisy_y = output['noisy']
 print(noisy_y)
 ```
 
-Generate and save noisy audios:
+Generate and save [noisy audios](audios/noisy):
 ```CMD
 python generate.py \
     --clean_dataset=audios/clean.txt \
@@ -57,8 +57,7 @@ python generate.py \
     --target_level=-25 \
     --target_level_floating_value=10 \
     --allowed_overlapped_bg_noise=true \
-    --silence_length=2 \
+    --silence_length=0.2 \
     --saved_dir=audios/noisy 
 ```
-
 

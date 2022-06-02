@@ -62,9 +62,28 @@ class DynamicMixing:
 
         assert 0 <= self.reverb_proportion <= 1, "reverberation proportion should be in [0, 1]"
 
-        self.bg_noise_dataset_list = [line.rstrip('\n') for line in open(bg_noise_dataset, "r")]
-        self.bb_noise_dataset_list = [line.rstrip('\n') for line in open(bb_noise_dataset, "r")]
-        self.rir_dataset_list = [line.rstrip('\n') for line in open(rir_dataset, "r")]
+        noise_provided = False
+        if bg_noise_dataset is not None:
+            assert os.path.exists(bg_noise_dataset)
+            self.bg_noise_dataset_list = [line.rstrip('\n') for line in open(bg_noise_dataset, "r")]
+            noise_provided = True
+        else:
+            self.bg_noise_dataset_list = []
+
+        if bb_noise_dataset is not None:
+            assert os.path.exists(bb_noise_dataset)
+            self.bb_noise_dataset_list = [line.rstrip('\n') for line in open(bb_noise_dataset, "r")]
+            noise_provided = True
+        else:
+            self.bb_noise_dataset_list = []
+
+        if rir_dataset is not None:
+            assert os.path.exists(rir_dataset)
+            self.rir_dataset_list = [line.rstrip('\n') for line in open(rir_dataset, "r")]
+        else:
+            self.rir_dataset_list = []
+
+        assert noise_provided == True, "You must provide either the bg_noise_dataset or bb_noise_dataset argument."
 
         self.snr_list = self.parse_range(snr_range)
         self.sir_list = self.parse_range(sir_range)
@@ -280,30 +299,32 @@ class DynamicMixing:
         sirs = []
         speakers_y = []
         bb_noise_files = []
-        n_speakers = np.random.randint(1, self.max_speakers_to_mix+1)
-        while len(speakers_y) < n_speakers:
-            speaker_y, bb_noise_file = self.select_speaker_y(len(clean_y))
-            speakers_y += [speaker_y]
-            sirs += [self.random_select_from(self.sir_list)]
-            bb_noise_files += [bb_noise_file]
+        if len(self.bb_noise_dataset_list) > 0:
+            n_speakers = np.random.randint(1, self.max_speakers_to_mix+1)
+            while len(speakers_y) < n_speakers:
+                speaker_y, bb_noise_file = self.select_speaker_y(len(clean_y))
+                speakers_y += [speaker_y]
+                sirs += [self.random_select_from(self.sir_list)]
+                bb_noise_files += [bb_noise_file]
 
         snrs = []
         noises_y = []
         bg_noise_files = []
-        if self.allowed_overlapped_bg_noise:
-            n_noises = np.random.randint(1, self.max_bg_noise_to_mix+1)
-            while len(noises_y) < n_noises:
-                noise_y, _, bg_noise_file = self.select_noise_y(len(clean_y), -1)
-                noises_y += [noise_y]
-                snrs += [self.random_select_from(self.snr_list)]
-                bg_noise_files += [bg_noise_file]
-        else:
-            start_pos = 0
-            while start_pos != -1:
-                noise_y, start_pos, bg_noise_file = self.select_noise_y(len(clean_y), start_pos)
-                noises_y += [noise_y]
-                snrs += [self.random_select_from(self.snr_list)]
-                bg_noise_files += [bg_noise_file]
+        if len(self.bg_noise_dataset_list) > 0:
+            if self.allowed_overlapped_bg_noise:
+                n_noises = np.random.randint(1, self.max_bg_noise_to_mix+1)
+                while len(noises_y) < n_noises:
+                    noise_y, _, bg_noise_file = self.select_noise_y(len(clean_y), -1)
+                    noises_y += [noise_y]
+                    snrs += [self.random_select_from(self.snr_list)]
+                    bg_noise_files += [bg_noise_file]
+            else:
+                start_pos = 0
+                while start_pos != -1:
+                    noise_y, start_pos, bg_noise_file = self.select_noise_y(len(clean_y), start_pos)
+                    noises_y += [noise_y]
+                    snrs += [self.random_select_from(self.snr_list)]
+                    bg_noise_files += [bg_noise_file]
 
         '''
         3 cases:
@@ -311,16 +332,17 @@ class DynamicMixing:
             - Mix bubble noise only
             - Mix both
         '''
-        choice = np.random.randint(3)
-        if choice == 1:
-            noises_y = []
-            snrs = []
-        if choice == 2:
-            speakers_y = []
-            sirs = []
+        if len(self.bg_noise_dataset_list) > 0 and len(self.bb_noise_dataset_list) > 0:
+            choice = np.random.randint(3)
+            if choice == 1:
+                noises_y = []
+                snrs = []
+            if choice == 2:
+                speakers_y = []
+                sirs = []
 
         use_reverb = bool(np.random.random(1) < self.reverb_proportion)
-        if use_reverb:
+        if use_reverb and len(self.rir_dataset_list) > 0:
             rir_file = self.random_select_from(self.rir_dataset_list)
             rir = self.load_wav(rir_file, sr=self.sr)
         else:
@@ -351,4 +373,5 @@ class DynamicMixing:
             "snrs": snrs,
             "rir_file": rir_file
         }
+        print(output)
         return output

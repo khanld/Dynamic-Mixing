@@ -9,11 +9,11 @@ if __name__ == '__main__':
     args = argparse.ArgumentParser(description='GENERATE MIXTURE')
     args.add_argument('--clean_dataset', type=str, required = True,
                       help='a text file containing list of clean speech audio paths')
-    args.add_argument('--bg_noise_dataset', type=str, default = '/home/khanhld/Desktop/DynamicMixing/audios/bg_noise.txt',
+    args.add_argument('--bg_noise_dataset', type=str, default = None,
                       help='Default is None')
-    args.add_argument('--bb_noise_dataset', type=str, default = '/home/khanhld/Desktop/DynamicMixing/audios/bb_noise.txt',
+    args.add_argument('--bb_noise_dataset', type=str, default = None,
                       help='Default is None')
-    args.add_argument('--rir_dataset', type=str, default = '/home/khanhld/Desktop/DynamicMixing/audios/rir.txt',
+    args.add_argument('--rir_dataset', type=str, default = None,
                       help='Default is None')
     args.add_argument('--snr_range', type=lambda x: [int(item) for item in x.split(',')], default = "-5,25",
                       help='Background noise level. Default is [-5, 25].')
