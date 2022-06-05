@@ -1,4 +1,4 @@
-# DYNAMIC MIXING FOR SPEECH PROCESSING(MIX-ON-THE-FLY)
+# DYNAMIC MIXING FOR SPEECH PROCESSING (MIX-ON-THE-FLY)
 
 ### Documentation
 An easy-to-use Dynamic Mixing python code for Speech Processing tasks such as Speech Enhancement, Speech Source Separation, Target Speech Extraction, and Speech Augmentation.
