@@ -34,18 +34,18 @@ class DynamicMixing:
             sir_range: Bubble noise level. Default is [-5, 25]
             sr: Sample rate. Default is 16000
             max_bg_noise_to_mix: The maximum number of BACKGROUND noise audios added to the clean audio when <allowed_overlapped_bg_noise> is True.
-                                 If <allowed_overlapped_bg_noise> is False, add UNLIMITED number of BACKGROUND noise audio till the end of the 
+                                 If <allowed_overlapped_bg_noise> is False, add UNLIMITED number of BACKGROUND noise audios till the end of the clean 
                                  audio with silence between. Default is 3
             max_speakers_to_mix: The maximum number of speakers appear in the clean audio (bubble noise). Default is 3
             reverb_proportion: Chance of using reverb. Default is 0.5
             target_level: Default is -25
             target_level_floating_value: Default is 10
             allowed_overlapped_bg_noise: Whether to allow overlapped BACKGROUND noise. 
-                                         If False, evenly add UNLIMITED number of BACKGROUND noise audio with silence between. Default is True.
+                                         If False, evenly add UNLIMITED number of BACKGROUND noise audios with silence between. Default is True.
                                          * Note: For BUBBLE noise, overlapped is allowed by default. 
                                                  Since if we add a new speaker to the clean speech audio, 
                                                  there exits two overlapped voice in the audio
-            silence_length: length of silence between every two consecutive BACKGROUND noise. Only used when <allowed_overlapped_bg_noise> is False. Default is 0.2
+            silence_length: length of silence between every two consecutive BACKGROUND noises. Only used when <allowed_overlapped_bg_noise> is False. Default is 0.2
             saved_dir: The directory to save the generated noisy audio. Default is None
         """
         super().__init__()
